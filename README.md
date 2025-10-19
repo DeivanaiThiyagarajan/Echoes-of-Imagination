@@ -106,3 +106,8 @@ SSID (Sequential Storytelling Image Dataset): https://github.com/zmmalakan/SSID-
 
 WordCloud, Matplotlib, PyTorch, Hugging Face Transformers
 
+
+## Author
+Deivanai Thiyagarajan
+- Email: deivanaithiyagarajan99@gmail.com
+- LinkedIn: https://www.linkedin.com/in/deivanai-t-909655177/
