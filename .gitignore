@@ -1,0 +1,9 @@
+*.zip
+*.jpeg
+*.jpg
+*.png
+*.json
+*.p
+Image_Caption_Dataset/
+SSID_Images/
+SSID_Annotations/

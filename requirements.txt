@@ -1,0 +1,38 @@
+# Core
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+tqdm
+
+# Deep Learning
+torch
+torchvision
+torchaudio
+transformers
+accelerate
+sentencepiece
+einops
+
+# Text-to-Image / VAE / CLIP
+diffusers
+open_clip_torch
+Pillow
+
+
+# UI and Visualization
+gradio
+streamlit
+
+# Utility
+requests
+jsonlines
+pyyaml
+
+# Optional (for diagrams or notebooks)
+jupyter
+graphviz
+
+#dataset
+kagglehub
