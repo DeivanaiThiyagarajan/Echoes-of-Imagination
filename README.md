@@ -13,9 +13,9 @@
 
 
 
-\*\*Echoes of Imagination\*\* is a multimodal AI pipeline designed to bring stories to life.  
+**Echoes of Imagination** is a multimodal AI pipeline designed to bring stories to life.  
 
-Currently, the project focuses on \*\*generating images from story text\*\*, turning each paragraph into a vivid illustration. In the future, this system will be expanded to \*\*generate accompanying music\*\* based on both the text and generated images, creating a fully immersive storytelling experience.
+Currently, the project focuses on **generating images from story text**, turning each paragraph into a vivid illustration. In the future, this system will be expanded to **generate accompanying music** based on both the text and generated images, creating a fully immersive storytelling experience.
 
 ---
 
@@ -23,28 +23,28 @@ Currently, the project focuses on \*\*generating images from story text\*\*, tur
 
 Stories have been one of humanity’s oldest ways of sharing knowledge, emotions, and imagination.  
 
-However, most narratives today remain \*\*text-only\*\*, limiting engagement, especially for younger audiences. There is a need for systems that \*\*translate text into rich multimedia experiences\*\*, combining visuals and sound to enhance comprehension and immersion.
+However, most narratives today remain **text-only**, limiting engagement, especially for younger audiences. There is a need for systems that **translate text into rich multimedia experiences**, combining visuals and sound to enhance comprehension and immersion.
 
 ---
 
 ## 💡 Current Solution
 
 - Breaks stories into short paragraphs or storylets.  
-- Generates \*\*images corresponding to each storylet\*\* using state-of-the-art text-to-image techniques.  
-- Maintains \*\*story coherence\*\* by using sequential storytelling datasets and preserving paragraph-image alignment.  
+- Generates **images corresponding to each storylet** using state-of-the-art text-to-image techniques.  
+- Maintains **story coherence** by using sequential storytelling datasets and preserving paragraph-image alignment.  
 
-\*Future expansion\*: Generate music from both text and images to create a fully multimodal narrative experience.
+*Future expansion*: Generate music from both text and images to create a fully multimodal narrative experience.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- \*\*Python 3.x\*\*  
-- \*\*PyTorch / Hugging Face Transformers\*\* for text and image modeling  
-- \*\*Pandas, Matplotlib, WordCloud\*\* for EDA and visualization  
-- \*\*Kaggle Datasets\*\*: COCO Captions for pretraining image generation  
-- \*\*SSID (Sequential Storytelling Image Dataset)\*\* for learning story-image sequence alignment  
-- \*\*Jupyter Notebooks\*\* for experiments and EDA  
+- **Python 3.x**  
+- **PyTorch / Hugging Face Transformers** for text and image modeling  
+- **Pandas, Matplotlib, WordCloud** for EDA and visualization  
+- **Kaggle Datasets**: COCO Captions for pretraining image generation  
+- **SSID (Sequential Storytelling Image Dataset)** for learning story-image sequence alignment  
+- **Jupyter Notebooks** for experiments and EDA  
 
 ---
 
