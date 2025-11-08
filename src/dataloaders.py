@@ -57,7 +57,7 @@ class TextToImageDataset(Dataset):
 class caption_dataset:
     def __init__(self):
         root_directory = os.path.dirname(os.getcwd())
-        self.data_dir = root_directory + '/data/datas/extracted_files/'
+        self.data_dir = root_directory + '/Echoes-of-Imagination/data/datas/extracted_files/'
         self.coco_captions_2014_path = self.data_dir + "annotations_trainval2014/annotations/captions_train2014.json"
         self.coco_captions_2017_path = self.data_dir + "annotations_trainval2017/annotations/captions_val2017.json"
 
