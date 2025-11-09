@@ -9,7 +9,13 @@ class clip_model:
         self.tokenizer = CLIPTokenizer.from_pretrained(self.model_name)
 
     def embed_text(self, text):
-        inputs = self.tokenizer(text, return_tensors="pt")
+        inputs = self.tokenizer(
+            text,
+            return_tensors="pt",
+            padding="max_length",
+            truncation=True,   # <-- this ensures sequences > 77 are truncated
+            max_length=77
+        )
 
         # Encode the text
         outputs = self.model(**inputs)

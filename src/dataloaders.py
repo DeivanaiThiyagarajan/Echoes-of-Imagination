@@ -27,10 +27,12 @@ class TextToImageDataset(Dataset):
     def __init__(self, df_combined, transform=None, text_model = 'CLIP'):
         self.data = df_combined
         self.transform = transform
-        if(text_model == 'CLIP'):
+        if text_model == 'CLIP':
             self.text_model = clip_model()
+            self.embed_dim = self.text_model.model.config.hidden_size
         else:
             self.text_model = bert_model()
+            self.embed_dim = self.text_model.model.config.hidden_size
         
     def __len__(self):
         return len(self.data)
@@ -38,7 +40,8 @@ class TextToImageDataset(Dataset):
     def __getitem__(self, idx, text_model = 'CLIP'):
         row = self.data.iloc[idx]
 
-        embeddings = self.text_model(row['caption'])
+        embeddings = self.text_model.embed_text(row['caption']).mean(dim=1).squeeze(0).detach().float()  # [512]
+
         img_name = row['unique_image_identifier'] + ('.jpg' if '.' not in row['unique_image_identifier'] else '')
         img_dir = row['source_dir']
         img_path = img_dir + '/' + img_name
@@ -57,7 +60,8 @@ class TextToImageDataset(Dataset):
 class caption_dataset:
     def __init__(self):
         root_directory = os.path.dirname(os.getcwd())
-        self.data_dir = root_directory + '/Echoes-of-Imagination/data/datas/extracted_files/'
+        #print(root_directory)
+        self.data_dir = os.path.join(root_directory, 'data', 'datas', 'extracted_files') + os.sep
         self.coco_captions_2014_path = self.data_dir + "annotations_trainval2014/annotations/captions_train2014.json"
         self.coco_captions_2017_path = self.data_dir + "annotations_trainval2017/annotations/captions_val2017.json"
 
@@ -143,7 +147,7 @@ class caption_dataset:
         val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
 
         image_transforms = T.Compose([
-            T.Resize((256, 256)), # Target size for the VAE
+            T.Resize((64, 64)), # Target size for the VAE
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
