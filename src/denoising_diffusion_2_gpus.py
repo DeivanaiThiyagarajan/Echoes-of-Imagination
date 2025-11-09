@@ -15,8 +15,8 @@ import torch.optim as optim
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-root_directory = os.path.dirname(os.getcwd())
-sys.path.append(os.path.join(root_directory, 'src'))
+#root_directory = os.path.dirname(os.getcwd())
+#sys.path.append(os.path.join(root_directory, 'src'))
 
 from text_encoders import clip_model, bert_model
 from dataloaders import caption_dataset
