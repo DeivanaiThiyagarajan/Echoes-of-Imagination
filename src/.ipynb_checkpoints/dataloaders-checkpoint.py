@@ -5,6 +5,7 @@ import os
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToPILImage
 import torchvision.transforms as T
+from torch.utils.data.distributed import DistributedSampler
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
@@ -157,15 +158,30 @@ class caption_dataset:
 
         return train_dataset, val_dataset, test_dataset
 
-    def get_dataloader(self, partition, batch_size):
+    def get_dataloader(self, partition, batch_size, num_workers = 8, distributed = False):
         train_dataset, val_dataset, test_dataset = self.get_datasets()
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-        val_loader   = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-        test_loader  = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
-
-        if(partition=='train'):
-            return train_loader
+        if(partition == 'train'):
+            dataset = train_dataset
         elif(partition == 'val'):
-            return val_loader
-        return test_loader
+            dataset = val_dataset
+        else:
+            dataset = test_dataset
+
+        if(distributed):
+            sampler = DistributedSampler(dataset)
+            shuffle = False
+        else:
+            sampler = None
+            shuffle = True
+
+        dataloader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            sampler=sampler,
+            num_workers=num_workers,
+            pin_memory=True
+        )
+
+        return dataloader, sampler
 

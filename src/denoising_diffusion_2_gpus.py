@@ -172,7 +172,7 @@ device = torch.device("cuda", local_rank)
 
 distributed = True
 dataloader = caption_dataset()
-train_dataloader, train_sampler = dataloader.get_dataloader(partition="train", batch_size=16, distributed=distributed)
+train_dataloader, train_sampler = dataloader.get_dataloader(partition="train", batch_size=32, distributed=distributed)
 
 scheduler = DDPM_Scheduler(num_time_steps=1000)
 
