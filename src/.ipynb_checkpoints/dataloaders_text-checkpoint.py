@@ -62,15 +62,21 @@ class caption_dataset:
     def __init__(self):
         root_directory = os.path.dirname(os.getcwd())
         #print(root_directory)
-        self.data_dir = os.path.join(root_directory, 'data', 'datas', 'extracted_files') + os.sep
-        self.coco_captions_2014_path = self.data_dir + "annotations_trainval2014/annotations/captions_train2014.json"
-        self.coco_captions_2017_path = self.data_dir + "annotations_trainval2017/annotations/captions_val2017.json"
+        self.data_dir = os.path.join(root_directory, 'data') + os.sep
+        #self.coco_captions_2014_path = os.path.join(self.data_dir , "Image_Caption_Dataset", "annotations_trainval2014" ,"annotations", "captions_train2014.json")
+        self.coco_captions_2014_path = "/blue/eee6778/share/dthiyagarajan/extracted_files/annotations_trainval2014/annotations/captions_train2014.json"
+        #eee6778/share/dthiyagarajan/extracted_files/annotations_trainval2014/annotations/captions_train2014.json
+        #self.coco_captions_2017_path = os.path.join(self.data_dir , "Image_Caption_Dataset", "annotations_trainval2017", "annotations", "captions_val2017.json")
+        self.coco_captions_2017_path = "/blue/eee6778/share/dthiyagarajan/extracted_files/annotations_trainval2017/annotations/captions_val2017.json"
 
-        self.coco_image_dir_2014 = self.data_dir + "train2014/train2014"
-        self.coco_image_dir_2017 = self.data_dir + "val2017/val2017"
+        #self.coco_image_dir_2014 = os.path.join(self.data_dir , "Image_Caption_Dataset", "train2014", "train2014")
+        self.coco_image_dir_2014 = '/blue/eee6778/share/dthiyagarajan/extracted_files/train2014/train2014'
+        #self.coco_image_dir_2017 = os.path.join(self.data_dir , "Image_Caption_Dataset", "val2017", "val2017")
+        self.coco_image_dir_2017 = '/blue/eee6778/share/dthiyagarajan/extracted_files/val2017/val2017'
 
-        self.flickr_annotations_path = self.data_dir + "flickr30k_images/results.csv"
-        self.flickr_image_path = self.data_dir + "flickr30k_images/flickr30k_images"
+        self.flickr_annotations_path = '/blue/eee6778/share/dthiyagarajan/extracted_files/flickr30k_images/results.csv'
+        #eee6778/dthiyagarajan/Echoes-of-Imagination/data/flickr30k_images/results.csv
+        self.flickr_image_path = '/blue/eee6778/share/dthiyagarajan/extracted_files/flickr30k_images/flickr30k_images/'
 
     def load_coco_dataset(self):
         # Load JSON
@@ -134,6 +140,7 @@ class caption_dataset:
 
     def load_full_caption_data(self):
         df_flickr = self.load_flickr_dataset()
+        print(df_flickr.head())
         df_coco_unified = self.load_coco_dataset()
 
         df_combined = pd.concat([df_coco_unified, df_flickr], ignore_index=True)
