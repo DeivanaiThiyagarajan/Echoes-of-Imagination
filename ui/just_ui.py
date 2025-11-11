@@ -13,18 +13,24 @@ os.environ["USE_TF"] = "0"
 # --- Ensure sentence tokenizer is available ---
 nltk.download('punkt', quiet=True)
 
-# --- Determine device (GPU if available, else CPU) ---
+# --- Determine device ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
+
+if device.type == "cpu":
+    print("⚠️  WARNING: Running on CPU will be VERY SLOW (30-60 min per image)")
+    print("   Recommendation: Use GPU for practical use\n")
+else:
+    print("✓ GPU detected! Using GPU acceleration.\n")
 
 # --- Load summarizer for shorter prompts (<77 tokens) ---
 print("Loading summarizer...")
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device=0 if torch.cuda.is_available() else -1)
 
-# --- Load Stable Diffusion pipeline for text-to-image generation ---
-print("Loading Stable Diffusion model...")
+# --- Load Stable Diffusion v1.5 pipeline ---
+print("Loading Stable Diffusion v1.5 model...")
 pipe = StableDiffusionPipeline.from_pretrained(
-    "runwayml/stable-diffusion-v1-5",  # Lightweight and reliable
+    "runwayml/stable-diffusion-v1-5",
     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     use_safetensors=True
 )
@@ -32,12 +38,12 @@ pipe = pipe.to(device)
 
 # Enable memory-efficient inference if using GPU
 if device.type == "cuda":
-    pipe.enable_attention_slicing()  # Reduces memory usage
+    pipe.enable_attention_slicing()
 
 print("✓ Models loaded successfully!")
 
 # --- Utilities ---
-def split_into_storylets(text, sentences_per_chunk=5):
+def split_into_storylets(text, sentences_per_chunk=3):
     """Split text into logical chunks for image generation."""
     sentences = nltk.sent_tokenize(text)
     return [' '.join(sentences[i:i+sentences_per_chunk]) for i in range(0, len(sentences), sentences_per_chunk)]
@@ -59,17 +65,17 @@ def summarize_text(text):
         return text[:75] if len(text) > 75 else text
 
 def generate_for_storylet(storylet):
-    """Generate an image for a single story segment using Stable Diffusion."""
+    """Generate an image for a single story segment using Stable Diffusion v1.5."""
     try:
         # Summarize the storylet to fit token limit
         prompt = summarize_text(storylet)
         print(f"Generating image for prompt: '{prompt}'")
         
-        # Generate image using the pretrained model
+        # Generate image using Stable Diffusion v1.5
         with torch.no_grad():
             image = pipe(
                 prompt=prompt,
-                num_inference_steps=30,  # Balance between speed and quality
+                num_inference_steps=30,
                 guidance_scale=7.5,
                 height=512,
                 width=512
@@ -105,20 +111,39 @@ def generate_story_images(story_text):
 
 # --- Display results as HTML + Images ---
 def display_results(blocks):
-    """Display story segments with generated images."""
+    """Display story segments with generated images in a single combined view."""
     if not blocks:
         return ""
     
-    html = "<div style='display: grid; gap: 20px;'>"
+    html = "<div style='display: flex; flex-direction: column; gap: 30px;'>"
+    
     for idx, b in enumerate(blocks, 1):
+        # Convert PIL image to base64
+        buffered = BytesIO()
+        b["image"].save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        
         html += f"""
-        <div style='border: 2px solid #ddd; padding: 15px; border-radius: 8px;'>
-            <h3>📖 Segment {idx}</h3>
-            <p><strong>Story:</strong> {b['text']}</p>
-            <p><strong>Prompt:</strong> <em>{b['prompt']}</em></p>
-            <img src="{b['image_url']}" style='max-width: 100%; height: auto; border-radius: 5px;'><br><br>
+        <div style='border: 3px solid #2196F3; padding: 20px; border-radius: 10px; background-color: #000000;'>
+            <h3 style='color: #FFFFFF; margin-top: 0;'>📖 Segment {idx}</h3>
+            
+            <div style='margin-bottom: 15px;'>
+                <p><strong style='color: #FFFFFF;'>📝 Story Text:</strong></p>
+                <p style='color: #FFFFFF; line-height: 1.6;'>{b['text']}</p>
+            </div>
+            
+            <div style='margin-bottom: 15px;'>
+                <p><strong style='color: #FFFFFF;'>💬 Prompt Used:</strong></p>
+                <p style='color: #CCCCCC; font-style: italic;'>"{b['prompt']}"</p>
+            </div>
+            
+            <div>
+                <p><strong style='color: #FFFFFF;'>🎨 Generated Image:</strong></p>
+                <img src="data:image/png;base64,{img_str}" style='max-width: 100%; height: auto; border-radius: 5px; border: 2px solid #2196F3;'><br>
+            </div>
         </div>
         """
+    
     html += "</div>"
     return html
 
@@ -139,17 +164,12 @@ with gr.Blocks(title="Story to Image Generator", theme=gr.themes.Soft()) as demo
             generate_btn = gr.Button("✨ Generate Story Sequence", size="lg", variant="primary")
             clear_btn = gr.Button("🧹 Clear All", size="lg")
 
-        # Right column: output gallery
+        # Right column: output
         with gr.Column(scale=2):
-            output_gallery = gr.Gallery(
-                label="📸 Generated Images",
-                show_label=True,
-                columns=1,
-                rows=2,
-                object_fit="scale-down",
-                height="auto"
+            output_html = gr.HTML(
+                label="� Story Segments with Images",
+                show_label=True
             )
-            output_info = gr.Textbox(label="� Story Segments & Prompts", lines=5, interactive=False)
             
             with gr.Row():
                 regenerate_btn = gr.Button("🔄 Regenerate All", size="md")
@@ -161,22 +181,15 @@ with gr.Blocks(title="Story to Image Generator", theme=gr.themes.Soft()) as demo
         """Generate images for all story segments."""
         blocks = generate_story_images(story_text)
         
-        # Prepare gallery data
-        images = [b["image"] for b in blocks]
+        # Prepare HTML with images embedded
+        html = display_results(blocks)
         
-        # Prepare info text
-        info_text = ""
-        for idx, b in enumerate(blocks, 1):
-            info_text += f"Segment {idx}:\n"
-            info_text += f"Story: {b['text'][:80]}...\n"
-            info_text += f"Prompt: {b['prompt']}\n\n"
-        
-        return images, info_text, blocks
+        return html, blocks
 
     def on_regenerate(blocks):
         """Regenerate images for stored story segments."""
         if not blocks:
-            return [], "No story data to regenerate", blocks
+            return "No story data to regenerate", blocks
         
         # Reconstruct the full story
         full_story = " ".join([b["text"] for b in blocks])
@@ -184,21 +197,14 @@ with gr.Blocks(title="Story to Image Generator", theme=gr.themes.Soft()) as demo
         # Generate new images
         new_blocks = generate_story_images(full_story)
         
-        # Prepare gallery data
-        images = [b["image"] for b in new_blocks]
+        # Prepare HTML with images embedded
+        html = display_results(new_blocks)
         
-        # Prepare info text
-        info_text = ""
-        for idx, b in enumerate(new_blocks, 1):
-            info_text += f"Segment {idx}:\n"
-            info_text += f"Story: {b['text'][:80]}...\n"
-            info_text += f"Prompt: {b['prompt']}\n\n"
-        
-        return images, info_text, new_blocks
+        return html, new_blocks
 
     def on_clear():
         """Clear all outputs."""
-        return [], "", []
+        return "", []
 
     def feedback_like():
         """Handle like feedback."""
@@ -212,30 +218,30 @@ with gr.Blocks(title="Story to Image Generator", theme=gr.themes.Soft()) as demo
     generate_btn.click(
         fn=on_generate, 
         inputs=story_input, 
-        outputs=[output_gallery, output_info, state],
+        outputs=[output_html, state],
         show_progress=True
     )
     
     regenerate_btn.click(
         fn=on_regenerate, 
         inputs=state, 
-        outputs=[output_gallery, output_info, state],
+        outputs=[output_html, state],
         show_progress=True
     )
     
     clear_btn.click(
         fn=on_clear, 
-        outputs=[output_gallery, output_info, state]
+        outputs=[output_html, state]
     )
     
     like_btn.click(
         fn=feedback_like,
-        outputs=output_info
+        outputs=output_html
     )
     
     dislike_btn.click(
         fn=feedback_dislike,
-        outputs=output_info
+        outputs=output_html
     )
 
 print("🚀 Launching Gradio interface...")
