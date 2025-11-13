@@ -251,9 +251,9 @@ python just_ui.py
 
 ### Model Performance
 
-**Architecture:** Latent Diffusion Model (LDM)
-- Parameters: 200M (77% reduction vs Stable Diffusion v1.5)
-- Image Resolution: 256×256
+**Architecture:** Stable Diffusion Model (SDM)
+- Parameters: 800M (5% reduction vs Stable Diffusion v1.5)
+- Image Resolution: 128×128
 - Inference: 50 DDIM steps
 
 **Training Progress (Current Run):**
