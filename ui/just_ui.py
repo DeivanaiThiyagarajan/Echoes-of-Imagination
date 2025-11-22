@@ -12,7 +12,14 @@ import os
 os.environ["USE_TF"] = "0"
 
 # --- Ensure sentence tokenizer is available ---
-nltk.download('punkt', quiet=True)
+try:
+    nltk.data.find('tokenizers/punkt_tab')
+except LookupError:
+    nltk.download('punkt_tab', quiet=True)
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt', quiet=True)
 
 # --- Determine device ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
