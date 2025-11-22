@@ -60,7 +60,7 @@ if device.type == "cuda":
 print("✓ Both models loaded successfully!")
 
 # --- Utilities ---
-def split_into_storylets(text, sentences_per_chunk=3):
+def split_into_storylets(text, sentences_per_chunk=5):
     """Split text into logical chunks for image generation."""
     sentences = nltk.sent_tokenize(text)
     return [' '.join(sentences[i:i+sentences_per_chunk]) for i in range(0, len(sentences), sentences_per_chunk)]
@@ -70,7 +70,7 @@ def summarize_text(text):
     """Summarize text to fit within CLIP token limit (77 tokens)."""
     try:
         # If text is too short, just return it as is
-        if len(text.split()) < 20:
+        if len(text.split()) < 50:
             return text
         
         # Summarize to 30-75 tokens (roughly 6-15 words)
