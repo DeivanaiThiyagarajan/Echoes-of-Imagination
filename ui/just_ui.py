@@ -103,7 +103,7 @@ def generate_for_storylet(storylet, previous_image=None):
         with torch.no_grad():
             image_stage1 = pipe_text2img(
                 prompt=summarized,
-                num_inference_steps=10,
+                num_inference_steps=50,
                 guidance_scale=7.5,
                 height=512,
                 width=512
@@ -125,7 +125,7 @@ def generate_for_storylet(storylet, previous_image=None):
                         prompt=summarized,
                         image=previous_image,
                         strength=0.6,  # 0.6 = 60% modification (balance between context and new content)
-                        num_inference_steps=10,
+                        num_inference_steps=50,
                         guidance_scale=7.5
                     ).images[0]
                 
