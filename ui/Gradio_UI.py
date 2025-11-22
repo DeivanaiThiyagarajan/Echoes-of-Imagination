@@ -1,9 +1,11 @@
 import gradio as gr
 from transformers import pipeline
-from diffusers import DiffusionPipeline
+from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline
 import torch
 import nltk, re
 import os
+from PIL import Image
+import numpy as np
 
 os.environ["USE_TF"] = "0"
 
@@ -13,15 +15,26 @@ nltk.download('punkt', quiet=True)
 # --- Load summarizer for shorter prompts (<77 tokens) ---
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
-# --- Load diffusion pipeline (placeholder model until custom one is ready) ---
-pipe = DiffusionPipeline.from_pretrained(
-    "stabilityai/stable-diffusion-2-1-base",  # smaller, CPU-safe
+# --- Load two models for sequential generation ---
+print("Loading Model 1: Text-to-Image Generation...")
+pipe_text2img = DiffusionPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",  # Primary model: text → image
     torch_dtype=torch.float32,
     use_safetensors=True
 )
-pipe.to("cpu")
+pipe_text2img.to("cpu")
+
+print("Loading Model 2: Image-to-Image Refinement...")
+pipe_img2img = StableDiffusionImg2ImgPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",  # Secondary model: (image + text) → refined image
+    torch_dtype=torch.float32,
+    use_safetensors=True
+)
+pipe_img2img.to("cpu")
 
 torch.cuda.empty_cache()
+
+print("✓ Both models loaded successfully")
 
 # --- Utility: Split story into chunks of 4-5 sentences ---
 def split_into_storylets(text, sentences_per_chunk=5):
@@ -36,26 +49,78 @@ def summarize_text(text):
     return summary
 
 
-# --- Generate an image for a single storylet ---
-def generate_for_storylet(storylet):
+# --- Generate an image for a single storylet using TWO models ---
+def generate_for_storylet(storylet, previous_image=None):
+    """
+    Two-stage image generation:
+    1. Model 1 (Text-to-Image): Generate initial image from storylet text
+    2. Model 2 (Image-to-Image): Refine using previous image + current text (if available)
+    
+    Args:
+        storylet: Story text for current segment
+        previous_image: Previous generated image (for refinement), or None for first image
+    
+    Returns:
+        tuple: (summarized_text, final_image)
+    """
     summarized = summarize_text(storylet)
-    image = pipe(prompt=summarized).images[0]
-    return summarized, image
+    
+    # Stage 1: Generate initial image from text
+    print(f"  → Stage 1: Generating from text: '{summarized[:50]}...'")
+    image_stage1 = pipe_text2img(prompt=summarized, num_inference_steps=30).images[0]
+    
+    # Stage 2: Refine with image-to-image if we have a previous image
+    if previous_image is not None:
+        print(f"  → Stage 2: Refining with previous image + text")
+        try:
+            # Ensure previous image is PIL Image
+            if isinstance(previous_image, np.ndarray):
+                previous_image = Image.fromarray((previous_image * 255).astype(np.uint8))
+            
+            # Refine: use previous image as visual context + current text
+            image_final = pipe_img2img(
+                prompt=summarized,
+                image=previous_image,
+                strength=0.6,  # 0.6 = 60% modification (balance between context and new content)
+                num_inference_steps=30,
+                guidance_scale=7.5
+            ).images[0]
+            
+            return summarized, image_final
+        except Exception as e:
+            print(f"  ⚠️ Refinement failed: {e}, using Stage 1 output")
+            return summarized, image_stage1
+    else:
+        # First image: no previous context
+        print(f"  → First image (no previous context)")
+        return summarized, image_stage1
 
 
 # --- Main generation function for full story ---
 def generate_story_images(story_text):
+    """
+    Generate story sequence with two-model pipeline:
+    - Model 1: Text → Initial Image (Stable Diffusion Text-to-Image)
+    - Model 2: (Previous Image + Text) → Refined Image (Stable Diffusion Image-to-Image)
+    """
     storylets = split_into_storylets(story_text)
     output_blocks = []
+    previous_image = None
 
     for idx, storylet in enumerate(storylets, 1):
-        summarized, image = generate_for_storylet(storylet)
+        print(f"\n[Storylet {idx}/{len(storylets)}] Processing...")
+        summarized, image = generate_for_storylet(storylet, previous_image)
+        
         block = {
             "text": storylet.strip(),
             "image": image,
             "summary": summarized
         }
         output_blocks.append(block)
+        
+        # Pass current image as context for next storylet
+        previous_image = image
+        print(f"✓ Completed storylet {idx}")
 
     return output_blocks
 
@@ -76,8 +141,17 @@ with gr.Blocks(title="Echoes of Imagination") as demo:
         # 🌌 Echoes of Imagination
         _Transform your stories into vivid illustrated sequences._
         
-        Paste your story below. The system will divide it into 4–5 sentence storylets,
-        summarize each, and generate an image that best represents the scene.
+        **Two-Model Pipeline for Enhanced Visual Coherence:**
+        - **Model 1 (Text-to-Image):** Generates initial image from storylet text
+        - **Model 2 (Image-to-Image):** Refines output using previous image + current text
+        
+        This dual-model approach maintains **visual continuity** across story segments while ensuring each scene accurately depicts the narrative.
+        
+        **How it works:**
+        1. Your story is divided into 4–5 sentence storylets
+        2. Each storylet is summarized and processed through both models
+        3. Images from previous storylets guide the generation of subsequent ones
+        4. Result: Coherent visual story with consistent character/scene continuity
         """
     )
 
@@ -107,11 +181,16 @@ with gr.Blocks(title="Echoes of Imagination") as demo:
         return elements, state_value
 
     def on_regenerate(state_value):
-        # Re-run generation for existing storylets
+        # Re-run generation with two-model pipeline for existing storylets
         regenerated = []
-        for b in state_value:
-            summarized, image = generate_for_storylet(b["text"])
+        previous_image = None
+        
+        for idx, b in enumerate(state_value):
+            print(f"\n[Regenerating {idx+1}/{len(state_value)}]")
+            summarized, image = generate_for_storylet(b["text"], previous_image)
             regenerated.append({"text": b["text"], "image": image, "summary": summarized})
+            previous_image = image
+        
         return display_results(regenerated), regenerated
 
     def on_clear():
