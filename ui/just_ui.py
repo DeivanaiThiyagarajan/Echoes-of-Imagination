@@ -5,7 +5,6 @@ import base64
 from io import BytesIO
 from transformers import pipeline
 from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline
-from diffusers.pipelines import InstructPix2PixPipeline
 import torch
 import numpy as np
 import os
@@ -45,10 +44,11 @@ pipe_text2img = DiffusionPipeline.from_pretrained(
 )
 pipe_text2img.to(device)
 
-print("Loading Model 2: Image-to-Image Refinement (InstructPix2Pix)...")
-pipe_img2img = InstructPix2PixPipeline.from_pretrained(
-    "timbrooks/instruct-pix2pix",
-    torch_dtype=torch.float32
+print("Loading Model 2: Image-to-Image Refinement...")
+pipe_img2img = StableDiffusionImg2ImgPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",
+    torch_dtype=torch.float32,
+    use_safetensors=True
 )
 pipe_img2img.to(device)
 
@@ -113,28 +113,23 @@ def generate_for_storylet(storylet, previous_image=None):
         
         # Stage 2: Refine with image-to-image if we have a previous image
         if previous_image is not None:
-            print(f"  → Stage 2: Refining with InstructPix2Pix (previous image + text)", flush=True)
+            print(f"  → Stage 2: Refining with previous image + text", flush=True)
             try:
                 # Ensure previous image is PIL Image
                 if isinstance(previous_image, np.ndarray):
                     previous_image = Image.fromarray((previous_image * 255).astype(np.uint8))
                 
-                # Resize image to 512x512 if needed for InstructPix2Pix
-                if previous_image.size != (512, 512):
-                    previous_image = previous_image.resize((512, 512), Image.Resampling.LANCZOS)
-                
-                # Refine using InstructPix2Pix: takes image + text instruction
-                # image_guidance_scale controls how much to follow the input image
+                # Refine: use previous image as visual context + current text using Model 2
                 with torch.no_grad():
                     image_final = pipe_img2img(
                         prompt=summarized,
                         image=previous_image,
-                        num_inference_steps=100,  # InstructPix2Pix typically uses more steps
-                        image_guidance_scale=1.5,  # Controls strength of image influence (1.0-2.0 typical)
+                        strength=0.6,  # 0.6 = 60% modification (balance between context and new content)
+                        num_inference_steps=50,
                         guidance_scale=7.5
                     ).images[0]
                 
-                print(f"  ✓ Stage 2 complete (InstructPix2Pix refinement)", flush=True)
+                print(f"  ✓ Stage 2 complete", flush=True)
                 return summarized, image_final
             except Exception as e:
                 print(f"  ⚠️ Refinement failed: {e}, using Stage 1 output", flush=True)
