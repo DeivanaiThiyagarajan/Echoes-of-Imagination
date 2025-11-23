@@ -1,7 +1,8 @@
 # Echoes of Imagination
 
-
 > Transform stories into immersive visual experiences.
+
+**📺 [Watch the Demo Video](https://youtu.be/N5tzQbg2wsA)** - See the system in action with real story-to-image generation
 
 ---
 
