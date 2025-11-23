@@ -2,7 +2,11 @@
 
 > Transform stories into immersive visual experiences.
 
-**📺 [Watch the Demo Video](https://youtu.be/N5tzQbg2wsA)** - See the system in action with real story-to-image generation
+## 📺 Demo Video
+
+[![Watch the demo](https://img.youtube.com/vi/N5tzQbg2wsA/maxresdefault.jpg)](https://youtu.be/N5tzQbg2wsA)
+
+*Click the image above to watch the system in action with real story-to-image generation*
 
 ---
 
