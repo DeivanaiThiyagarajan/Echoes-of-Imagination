@@ -4,7 +4,8 @@ import nltk
 import base64
 from io import BytesIO
 from transformers import pipeline
-from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline, InstructPix2PixPipeline
+from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline
+from diffusers.pipelines import InstructPix2PixPipeline
 import torch
 import numpy as np
 import os
