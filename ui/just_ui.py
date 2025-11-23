@@ -4,7 +4,7 @@ import nltk
 import base64
 from io import BytesIO
 from transformers import pipeline
-from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline
+from diffusers import DiffusionPipeline, StableDiffusionImg2ImgPipeline, InstructPix2PixPipeline
 import torch
 import numpy as np
 import os
@@ -44,11 +44,10 @@ pipe_text2img = DiffusionPipeline.from_pretrained(
 )
 pipe_text2img.to(device)
 
-print("Loading Model 2: Image-to-Image Refinement...")
-pipe_img2img = StableDiffusionImg2ImgPipeline.from_pretrained(
-    "runwayml/stable-diffusion-v1-5",
-    torch_dtype=torch.float32,
-    use_safetensors=True
+print("Loading Model 2: Image-to-Image Refinement (InstructPix2Pix)...")
+pipe_img2img = InstructPix2PixPipeline.from_pretrained(
+    "timbrooks/instruct-pix2pix",
+    torch_dtype=torch.float32
 )
 pipe_img2img.to(device)
 
@@ -113,23 +112,28 @@ def generate_for_storylet(storylet, previous_image=None):
         
         # Stage 2: Refine with image-to-image if we have a previous image
         if previous_image is not None:
-            print(f"  → Stage 2: Refining with previous image + text", flush=True)
+            print(f"  → Stage 2: Refining with InstructPix2Pix (previous image + text)", flush=True)
             try:
                 # Ensure previous image is PIL Image
                 if isinstance(previous_image, np.ndarray):
                     previous_image = Image.fromarray((previous_image * 255).astype(np.uint8))
                 
-                # Refine: use previous image as visual context + current text using Model 2
+                # Resize image to 512x512 if needed for InstructPix2Pix
+                if previous_image.size != (512, 512):
+                    previous_image = previous_image.resize((512, 512), Image.Resampling.LANCZOS)
+                
+                # Refine using InstructPix2Pix: takes image + text instruction
+                # image_guidance_scale controls how much to follow the input image
                 with torch.no_grad():
                     image_final = pipe_img2img(
                         prompt=summarized,
                         image=previous_image,
-                        strength=0.6,  # 0.6 = 60% modification (balance between context and new content)
-                        num_inference_steps=50,
+                        num_inference_steps=100,  # InstructPix2Pix typically uses more steps
+                        image_guidance_scale=1.5,  # Controls strength of image influence (1.0-2.0 typical)
                         guidance_scale=7.5
                     ).images[0]
                 
-                print(f"  ✓ Stage 2 complete", flush=True)
+                print(f"  ✓ Stage 2 complete (InstructPix2Pix refinement)", flush=True)
                 return summarized, image_final
             except Exception as e:
                 print(f"  ⚠️ Refinement failed: {e}, using Stage 1 output", flush=True)
@@ -239,7 +243,7 @@ with gr.Blocks(title="Story to Image Generator") as demo:
         # Right column: output
         with gr.Column(scale=2):
             output_html = gr.HTML(
-                label="� Story Segments with Images",
+                label="📖 Story Segments with Images",
                 show_label=True
             )
             
@@ -247,6 +251,15 @@ with gr.Blocks(title="Story to Image Generator") as demo:
                 regenerate_btn = gr.Button("🔄 Regenerate All", size="md")
                 like_btn = gr.Button("👍 Like", size="md")
                 dislike_btn = gr.Button("👎 Dislike", size="md")
+            
+            # Add review textbox
+            review_input = gr.Textbox(
+                lines=4,
+                placeholder="Share your feedback about the generated images (optional)...",
+                label="📝 Write a Review",
+                show_label=True
+            )
+            submit_review_btn = gr.Button("📤 Submit Review", size="md", variant="secondary")
 
     # --- Callbacks ---
     def on_generate(story_text):
@@ -301,6 +314,29 @@ with gr.Blocks(title="Story to Image Generator") as demo:
     def feedback_dislike():
         """Handle dislike feedback."""
         return "👎 Feedback recorded: You disliked this result!"
+    
+    def submit_review(review_text):
+        """Handle review submission."""
+        if not review_text.strip():
+            return "⚠️ Please write a review before submitting!"
+        
+        # Save review to file
+        import json
+        from datetime import datetime
+        
+        review_data = {
+            "timestamp": datetime.now().isoformat(),
+            "review": review_text.strip()
+        }
+        
+        # Append to reviews file
+        reviews_file = "reviews.jsonl"
+        try:
+            with open(reviews_file, "a") as f:
+                f.write(json.dumps(review_data) + "\n")
+            return f"✅ Review submitted! Thank you for your feedback.\n\n📝 Your review:\n{review_text}"
+        except Exception as e:
+            return f"❌ Error saving review: {e}"
 
     # --- Connect buttons ---
     generate_btn.click(
@@ -329,6 +365,12 @@ with gr.Blocks(title="Story to Image Generator") as demo:
     
     dislike_btn.click(
         fn=feedback_dislike,
+        outputs=output_html
+    )
+    
+    submit_review_btn.click(
+        fn=submit_review,
+        inputs=review_input,
         outputs=output_html
     )
 
